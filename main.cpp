@@ -290,6 +290,7 @@ std::string addSetupHLibs() {
         return "";
     }
     // read setup.h
+    bool gdiplus = false, expat = false;
     while(std::getline(file, line)) {
         strstrip(line);
         // start with wxWidgets libraries
@@ -311,20 +312,21 @@ std::string addSetupHLibs() {
                 temp += "-lwxscintilla-" + WXVER + " ";
             }
             // add non-wx libraries
-        } else if(line.find("wxUSE_EXPAT") != std::string::npos) {
-            if(line[line.length() - 1] == '1') temp += "-lexpat ";
         } else if(
             // this isn't the correct flag, but it is referred for value
             // also there are 2 instances of this, either of them being 1 will add the flag
-            line.find("wxUSE_GRAPHICS_CONTEXT ") != std::string::npos) {
-            if(line[line.length() - 1] == '1') temp += "-lgdiplus ";
+            line.find("wxUSE_GRAPHICS_CONTEXT ") != std::string::npos && !gdiplus) {
+            if(line[line.length() - 1] == '1') {
+                temp += "-lgdiplus ";
+                gdiplus = true;
+            }
         } else if(line.find("wxUSE_LIBJPEG") != std::string::npos) {
             if(line[line.length() - 1] == '1') temp += "-ljpeg ";
         } else if(line.find("wxUSE_LIBPNG") != std::string::npos) {
             if(line[line.length() - 1] == '1') temp += "-lpng ";
         } else if(line.find("wxUSE_LIBTIFF") != std::string::npos) {
             if(line[line.length() - 1] == '1') temp += "-ltiff ";
-        } else if(line.find("wxUSE_OLE") != std::string::npos) {
+        } else if(line.find("wxUSE_OLE ") != std::string::npos) {
             if(line[line.length() - 1] == '1') {
                 temp += "-lole32 ";
                 temp += "-loleaut32 ";
@@ -334,6 +336,12 @@ std::string addSetupHLibs() {
             }
         } else if(line.find("wxUSE_SOCKETS") != std::string::npos) {
             if(line[line.length() - 1] == '1') temp += "-lwsock32 ";
+        // wx-config uses XRC flag for this, but XML library depends on it too
+        } else if((line.find("wxUSE_XRC") != std::string::npos || line.find("wxUSE_XML") != std::string::npos) && !expat) {
+            if(line[line.length() - 1] == '1') {
+                temp += "-lexpat ";
+                expat = true;
+            }
         } else if(line.find("wxUSE_ZLIB") != std::string::npos) {
             if(line[line.length() - 1] == '1') temp += "-lz ";
         }
@@ -346,8 +354,8 @@ std::string addFlaglessLibs(bool custom) {
     // if you wish to fine-tune these additions manually, use "--wxflagsCUSTOM
     if(!custom) {
         return "-lkernel32 -luser32 -lgdi32 -lcomdlg32 -lwinspool -lwinmm "
-               "-lshell32 -lcomctl32 -lversion -lshlwapi -luxtheme -loleacc "
-               "-luuid -lrpcrt4 -ladvapi32 ";
+               "-lshell32 -lcomctl32 -lversion -lshlwapi -luxtheme "
+               "-luuid -lrpcrt4 -ladvapi32 -loleacc ";
     }
     return "";
 }
@@ -417,7 +425,7 @@ std::string fixLibNames(std::string str) {
 }
 
 // fix the library flags
-std::string fixLibs(std::string str) {
+std::string fixLibs(std::string str, bool custom) {
     // first fix directories
     std::string inc = "lib/wx";
     size_t pos = str.find(inc);
@@ -430,7 +438,12 @@ std::string fixLibs(std::string str) {
         // try again
         pos = str.find(inc, pos + inc.length());
     }
-    return fixLibNames(str);
+    // fix library names
+    str = fixLibNames(str);
+    strstrip(str);
+    // add the libraries wx-config couldn't
+    str += " " + addLibs(custom) + "\n";
+    return str;
 }
 
 bool isDynamic(int argc, char *argv[]) {
@@ -442,9 +455,9 @@ bool isDynamic(int argc, char *argv[]) {
 }
 
 bool isCustom(int argc, char *argv[]) {
-    std::string str_dynamic = "--wxflagsCUSTOM";
+    std::string str_custom = "--wxflagsCUSTOM";
     for(int i = 0; i < argc; i++) {
-        if(argv[i] == str_dynamic) return true;
+        if(argv[i] == str_custom) return true;
     }
     return false;
 }
@@ -570,12 +583,7 @@ int main(int argc, char **argv) {
                 }
             }
             // fix the output of wx-config
-            output = fixLibs(output);
-            // remove the newline at the end of the output
-            strstrip(output);
-            // add the libraries wx-config couldn't
-            // by first reading from the setup.h file
-            output += " " + addLibs(isCustom(argc, argv)) + "\n";
+            output = fixLibs(output, isCustom(argc, argv));
         } else if(isCFlags(argc, argv)) {
             output = fixInclude(output);
         } else if(isRcFlags(argc, argv)) {

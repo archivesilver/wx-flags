@@ -38,7 +38,7 @@ The current version is a single .cpp file. Compile the file and move the created
 # Usage
 Add wx-flags.exe's directory into PATH. Codelite's Environment Variables can be used: 
 - In Codelite Menu, select Settings → Environment Variables...
-- Add this line: `PATH=C:\Program Files\CodeLite\bin` (PATH should be equal to CodeLiteDir environment variable plus `\bin`.)
+- Add this line: `PATH=C:\Program Files\CodeLite\bin;$PATH` (PATH should be equal to CodeLiteDir environment variable plus `\bin`.)
 Right click on the project folder, located on the left sidebar and select *Properties*.
 To use the tool in an existing project, make the following changes:
 - In `Compiler` section, next to `C++ Compiler Options`, replace `wx-config` with `wx-flags`. 
@@ -82,6 +82,7 @@ To have this problem permanently solved, you can save a project as template.
 # Troubleshooting
 - If you receive errors about libraries that couldn't be found, it is probably because wxWidgets team has decided to change the library naming conventions. As a workaround, you can try renaming your libraries to what the tool is expecting. 
 - If you receive errors stating that the tool is configured incorrectly, it means the original wx-config tool is not working the way it's supposed to. Make sure you can first use wx-config without this tool without receiving unusual errors. 
+- If you receive errors about undefined or replaced symbols, it is probably about a missing library or the library order. I will try to update the order if I get feedback. 
 
 # Additional Tips
 These aren't really related to the tool, but while we're at it, I figured I would list the other things I have done to work more comfortably with static linking. 
